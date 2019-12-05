@@ -1,5 +1,5 @@
 import time
-from typing import List, Union
+from typing import List
 
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
@@ -22,7 +22,11 @@ class PageProcessor:
                 return cells[5].find_element_by_tag_name('img')
         return None
 
-    def process_login_page(self) -> bool:
+    def process_login_page(self, username: str, password: str) -> bool:
+        username_element: WebElement = self._driver.find_element_by_name('PMA')
+        username_element.send_keys(username)
+        password_element: WebElement = self._driver.find_element_by_name('PIN')
+        password_element.send_keys(password)
         all_filled = False
         while not all_filled:
             all_filled = True
