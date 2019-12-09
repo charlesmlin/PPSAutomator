@@ -13,9 +13,7 @@ PPS_WEBLINK = 'https://www.ppshk.com/pps/pps2/revamp2/template/pc/login_c.jsp'
 MIN_CENTS = 0
 MAX_CENTS = 4
 EPSILON = 1e-6
-
-MERCHANT_CODE = 24
-AMOUNT_TO_PAY = 100.00
+MAX_RETRY_COUNT = 5
 
 
 def get_payment_list(amount: float) -> List[float]:
@@ -45,20 +43,24 @@ def get_payment_list(amount: float) -> List[float]:
 
 def main(weblink: str, user_input: TkInput) -> None:
     payment_list: List[float] = get_payment_list(user_input.get_payment_amount())
-    print(f'Amount to pay = {"{:.2f}".format(sum(payment_list))}, payment times = {payment_list.__len__()}')
+    print(f'Amount to pay = {"{:.2f}".format(sum(payment_list))}, payment times = {len(payment_list)}')
     print(f'Payment breakdown: {", ".join(map(lambda x: "{:.2f}".format(x), payment_list))}')
 
     with webdriver.Chrome() as driver:
         driver.get(weblink)
         processor = PageProcessor(driver)
-        processor.process_login_page(user_input.get_username(), user_input.get_password())
-        for payment in payment_list:
-            print(f'Paying Merchant with code {user_input.get_merchant_code()} and amount {payment}')
-            processor.process_merchant_list_page(user_input.get_merchant_code())
-            processor.process_payment_page(payment)
-            processor.process_confirm_payment_page()
-            processor.process_pay_another_page()
-    print('All Done')
+        success = Utils.run_with_retry(processor.process_login_page,
+                                       [user_input.get_username(), user_input.get_password()], MAX_RETRY_COUNT)
+        if not success:
+            print(f'Login failure after {MAX_RETRY_COUNT} attempt(s)')
+        else:
+            for payment in payment_list:
+                print(f'Paying Merchant with code {user_input.get_merchant_code()} and amount {payment}')
+                processor.process_merchant_list_page(user_input.get_merchant_code())
+                Utils.run_with_retry(processor.process_payment_page, [payment], MAX_RETRY_COUNT)
+                processor.process_confirm_payment_page()
+                processor.process_pay_another_page()
+            print('All Done')
 
 
 if __name__ == '__main__':

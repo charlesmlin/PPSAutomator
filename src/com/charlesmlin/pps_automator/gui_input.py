@@ -43,6 +43,9 @@ class TkInput:
         Label(self._root).grid(row=4)
         self._submit_button = Button(self._root, text='提交', command=self.submit)
         self._submit_button.grid(row=5, sticky=W)
+
+        self._username_entry.focus_set()
+        self._root.bind('<Return>', lambda event: self.submit())
         self._root.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def submit(self) -> None:

@@ -1,13 +1,13 @@
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Tuple, Callable
 
 
 class Utils:
     @staticmethod
     def get_path(file_path: Path, root_name: str) -> Path or None:
         targets: List[Path] = list(filter(lambda x: x.name == root_name, file_path.parents))
-        if targets.__len__() > 0:
+        if len(targets) > 0:
             return targets[0]
         return None
 
@@ -20,3 +20,16 @@ class Utils:
                 return Path(path.parent)
             return None
         return Path(pyinstaller_path)
+
+    @staticmethod
+    def flip(tuple_list: List[Tuple]) -> List[Tuple]:
+        return list(zip(*tuple_list))
+
+    @staticmethod
+    def run_with_retry(func: Callable, args: List, max_retry_count: int) -> bool:
+        success = False
+        retry_count = 0
+        while not success and retry_count <= max_retry_count:
+            success = func(*args)
+            retry_count += 1
+        return success

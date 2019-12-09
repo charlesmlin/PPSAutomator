@@ -105,3 +105,8 @@ venv.bak/
 
 # .idea folder
 .idea/
+
+# output folder, which stores intermediate results after parsing captchas
+output/
+captcha/
+tensorflow/

@@ -1,8 +1,14 @@
+import os
 import time
+from pathlib import Path
 from typing import List
 
+from selenium.common.exceptions import NoAlertPresentException
+from selenium.webdriver.common.alert import Alert
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
+
+from src.com.charlesmlin.captcha_fetcher.util import CaptchaUtils
 
 
 class PageProcessor:
@@ -27,22 +33,32 @@ class PageProcessor:
         username_element.send_keys(username)
         password_element: WebElement = self._driver.find_element_by_name('PIN')
         password_element.send_keys(password)
-        all_filled = False
-        while not all_filled:
-            all_filled = True
-            time.sleep(1)
-            for element in ['PMA', 'PIN', 'captchaCode']:
-                input_box: WebElement = self._driver.find_element_by_name(element)
-                text = input_box.get_attribute('value')
-                if text is None or text is '':
-                    all_filled = False
-                if element == 'captchaCode' and text.__len__() != 4:
-                    all_filled = False
-        print('All required fields on login page are filled')
-        time.sleep(3)
+        image_element: WebElement = self._driver.find_element_by_id('exampleCaptchaTag_CaptchaImage')
+        reload_element: WebElement = self._driver.find_element_by_id('exampleCaptchaTag_ReloadLink')
+        captcha_text = self.get_captcha_text(image_element, reload_element)
+        captcha_element: WebElement = self._driver.find_element_by_name('captchaCode')
+        captcha_element.send_keys(captcha_text)
         go_button: WebElement = self._driver.find_element_by_name('go')
         go_button.click()
-        return True
+        try:
+            alert: Alert = self._driver.switch_to.alert
+            alert.accept()
+        except NoAlertPresentException:
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def get_captcha_text(image_element: WebElement, reload_element: WebElement) -> str:
+        captcha_text = ''
+        while len(captcha_text) != 4:
+            img_path = Path(os.getenv('TEMP')).joinpath('captcha.png')
+            image_element.screenshot(str(img_path))
+            time.sleep(1)
+            captcha_text = CaptchaUtils.predict(img_path)
+            if len(captcha_text) != 4:
+                reload_element.click()
+        return captcha_text
 
     def process_merchant_list_page(self, merchant_code: int) -> bool:
         pay_button = self.get_pay_button(merchant_code)
@@ -57,20 +73,31 @@ class PageProcessor:
         amount_element.send_keys('{:.2f}'.format(amount))
         proceed_button: WebElement = self._driver.find_element_by_name('proceedBut')
         captcha_list: List[WebElement] = self._driver.find_elements_by_name('captchaCode')
-        if captcha_list.__len__() > 0:
-            text = ''
-            while text is None or text is '' or text.__len__() != 4:
-                time.sleep(1)
-                input_box: WebElement = self._driver.find_element_by_name('captchaCode')
-                text = input_box.get_attribute('value')
-            time.sleep(3)
+        if len(captcha_list) > 0:
+            image_element: WebElement = self._driver.find_element_by_id('exampleCaptchaTag_CaptchaImage')
+            reload_element: WebElement = self._driver.find_element_by_id('exampleCaptchaTag_ReloadLink')
+            captcha_text = self.get_captcha_text(image_element, reload_element)
+            captcha_list[0].send_keys(captcha_text)
+        # if len(captcha_list) > 0:
+        #     text = ''
+        #     while text is None or text is '' or len(text) != 4:
+        #         time.sleep(1)
+        #         input_box: WebElement = self._driver.find_element_by_name('captchaCode')
+        #         text = input_box.get_attribute('value')
+        #     time.sleep(3)
         proceed_button.click()
-        return True
+        try:
+            alert: Alert = self._driver.switch_to.alert
+            alert.accept()
+        except NoAlertPresentException:
+            return True
+        else:
+            return False
 
     def process_confirm_payment_page(self) -> bool:
         images: List[WebElement] = self._driver.find_elements_by_tag_name('img')
         confirm_button: List[WebElement] = list(filter(lambda x: x.get_attribute('alt') == '繳款', images))
-        if confirm_button.__len__() > 0:
+        if len(confirm_button) > 0:
             confirm_button[0].click()
             return True
         print('confirm button not found')
@@ -79,7 +106,7 @@ class PageProcessor:
     def process_pay_another_page(self) -> bool:
         images: List[WebElement] = self._driver.find_elements_by_tag_name('img')
         pay_another_button: List[WebElement] = list(filter(lambda x: x.get_attribute('alt') == '繳付另一張賬單', images))
-        if pay_another_button.__len__() > 0:
+        if len(pay_another_button) > 0:
             pay_another_button[0].click()
             return True
         print('confirm button not found')
