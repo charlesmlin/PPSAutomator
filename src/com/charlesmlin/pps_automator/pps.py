@@ -1,10 +1,9 @@
 import os
 import random
 from pathlib import Path
-from typing import List
+from typing import List, Callable
 
-from selenium import webdriver
-
+from src.com.charlesmlin.pps_automator.driver import BrowserDriver
 from src.com.charlesmlin.pps_automator.gui_input import TkInput
 from src.com.charlesmlin.pps_automator.page_processor import PageProcessor
 from src.com.charlesmlin.pps_automator.util import Utils
@@ -14,6 +13,17 @@ MIN_CENTS = 0
 MAX_CENTS = 4
 EPSILON = 1e-6
 MAX_RETRY_COUNT = 5
+DEFAULT_DRIVER = BrowserDriver.CHROME
+
+
+def add_driver_to_path(driver: BrowserDriver) -> None:
+    print(f'checking if {driver.name.lower()} driver installation is needed')
+    func: Callable = driver.value[0]
+    if func is not None:
+        driver_path: Path = func()
+        if driver_path is not None:
+            os.environ['PATH'] += os.pathsep + str(driver_path.parent)
+    print(f'{driver.name.lower()} driver is installed and added to PATH')
 
 
 def get_payment_list(amount: float) -> List[float]:
@@ -41,12 +51,13 @@ def get_payment_list(amount: float) -> List[float]:
     return payment_list
 
 
-def main(weblink: str, user_input: TkInput) -> None:
+def main(weblink: str, user_input: TkInput, browser_driver: BrowserDriver) -> None:
     payment_list: List[float] = get_payment_list(user_input.get_payment_amount())
     print(f'Amount to pay = {"{:.2f}".format(sum(payment_list))}, payment times = {len(payment_list)}')
     print(f'Payment breakdown: {", ".join(map(lambda x: "{:.2f}".format(x), payment_list))}')
 
-    with webdriver.Chrome() as driver:
+    remote_driver = browser_driver.value[1]
+    with remote_driver() as driver:
         driver.get(weblink)
         processor = PageProcessor(driver)
         success = Utils.run_with_retry(processor.process_login_page,
@@ -67,6 +78,7 @@ if __name__ == '__main__':
     path: Path = Utils.get_project_path()
     if path is not None:
         os.environ['PATH'] += os.pathsep + str(path.joinpath('libs'))
+    add_driver_to_path(DEFAULT_DRIVER)
     tk_input = TkInput()
     tk_input.show_front_end()
-    main(PPS_WEBLINK, tk_input)
+    main(PPS_WEBLINK, tk_input, DEFAULT_DRIVER)
