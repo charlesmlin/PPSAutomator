@@ -14,13 +14,13 @@ class TkInput:
     _submit_button: Button
     _username: str
     _password: str
-    _merchant_code: int
+    _merchant_code: str
     _payment_amount: float
 
     def __init__(self):
         self._username = ''
         self._password = ''
-        self._merchant_code = 0
+        self._merchant_code = '00'
         self._payment_amount = 0.0
         self._root = Tk()
         self._root.winfo_toplevel().wm_title('PPS Automator')
@@ -59,7 +59,8 @@ class TkInput:
             valid = False
             messagebox.showerror("錯誤", "戶口密碼不應為空白")
         try:
-            self._merchant_code = getint(self._merchant_entry.get())
+            getint(self._merchant_entry.get())                # Check if merchant code can be casted to int
+            self._merchant_code = self._merchant_entry.get()  # Keep str version for code prefixed with 0
         except ValueError:
             if valid:
                 valid = False
@@ -90,7 +91,7 @@ class TkInput:
     def get_password(self) -> str:
         return self._password
 
-    def get_merchant_code(self) -> int:
+    def get_merchant_code(self) -> str:
         return self._merchant_code
 
     def get_payment_amount(self) -> float:

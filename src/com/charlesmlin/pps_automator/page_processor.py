@@ -17,14 +17,14 @@ class PageProcessor:
     def __init__(self, driver: WebDriver) -> None:
         self._driver = driver
 
-    def get_pay_button(self, merchant_code: int) -> WebElement or None:
+    def get_pay_button(self, merchant_code: str) -> WebElement or None:
         table_container: WebElement = self._driver.find_element_by_class_name('bgTable')
         rows: List[WebElement] = table_container.find_elements_by_tag_name('tr')
         rows = rows[2:-1]
         # headers = ['', 'Merchant_Code', 'Bill_Name', 'Bill_No', 'Last_Payment', 'Execute']
         for row in rows:
             cells: List[WebElement] = row.find_elements_by_tag_name('td')
-            if cells[1].text == str(merchant_code):
+            if cells[1].text == merchant_code:
                 return cells[5].find_element_by_tag_name('img')
         return None
 
@@ -60,7 +60,7 @@ class PageProcessor:
                 reload_element.click()
         return captcha_text
 
-    def process_merchant_list_page(self, merchant_code: int) -> bool:
+    def process_merchant_list_page(self, merchant_code: str) -> bool:
         pay_button = self.get_pay_button(merchant_code)
         if pay_button is not None:
             pay_button.click()
