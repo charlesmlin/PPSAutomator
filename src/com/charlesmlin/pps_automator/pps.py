@@ -68,8 +68,10 @@ def main(weblink: str, user_input: TkInput, browser_driver: BrowserDriver) -> No
             if not success:
                 print(f'Login failure after {MAX_RETRY_COUNT} attempt(s)')
             else:
+                counter = 0
                 for payment in payment_list:
-                    print(f'Paying merchant with code {user_input.get_merchant_code()}. '
+                    counter += 1
+                    print(f'Payment-{counter} Paying merchant {user_input.get_merchant_code()}. '
                           f'Remaining amount = {"{:.2f}".format(remaining_amount)}. '
                           f'Next payment = {"{:.2f}".format(payment)}')
                     processor.process_merchant_list_page(user_input.get_merchant_code())
