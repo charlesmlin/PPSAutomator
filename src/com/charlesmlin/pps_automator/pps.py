@@ -52,7 +52,9 @@ def get_payment_list(amount: float) -> List[float]:
 
 
 def main(weblink: str, user_input: TkInput, browser_driver: BrowserDriver) -> None:
-    payment_list: List[float] = get_payment_list(user_input.get_payment_amount())
+    total_amount: float = user_input.get_payment_amount()
+    payment_list: List[float] = get_payment_list(total_amount)
+    remaining_amount = total_amount
     print(f'Amount to pay = {"{:.2f}".format(sum(payment_list))}, payment times = {len(payment_list)}')
     print(f'Payment breakdown: {", ".join(map(lambda x: "{:.2f}".format(x), payment_list))}')
 
@@ -60,17 +62,27 @@ def main(weblink: str, user_input: TkInput, browser_driver: BrowserDriver) -> No
     with remote_driver() as driver:
         driver.get(weblink)
         processor = PageProcessor(driver)
-        success = Utils.run_with_retry(processor.process_login_page,
-                                       [user_input.get_username(), user_input.get_password()], MAX_RETRY_COUNT)
-        if not success:
-            print(f'Login failure after {MAX_RETRY_COUNT} attempt(s)')
+        try:
+            success = Utils.run_with_retry(processor.process_login_page,
+                                           [user_input.get_username(), user_input.get_password()], MAX_RETRY_COUNT)
+            if not success:
+                print(f'Login failure after {MAX_RETRY_COUNT} attempt(s)')
+            else:
+                for payment in payment_list:
+                    print(f'Paying merchant with code {user_input.get_merchant_code()}. '
+                          f'Remaining amount = {"{:.2f}".format(remaining_amount)}. '
+                          f'Next payment = {"{:.2f}".format(payment)}')
+                    processor.process_merchant_list_page(user_input.get_merchant_code())
+                    Utils.run_with_retry(processor.process_payment_page, [payment], MAX_RETRY_COUNT)
+                    processor.process_confirm_payment_page()
+                    remaining_amount = round(remaining_amount - payment, 2)
+                    processor.process_pay_another_page()
+        except Exception:
+            pass
+        if remaining_amount > 0:
+            print(f'Not all is done. Paid amount = {"{:.2f}".format(total_amount - remaining_amount)}. '
+                  f'Remaining amount = {"{:.2f}".format(remaining_amount)}')
         else:
-            for payment in payment_list:
-                print(f'Paying Merchant with code {user_input.get_merchant_code()} and amount {payment}')
-                processor.process_merchant_list_page(user_input.get_merchant_code())
-                Utils.run_with_retry(processor.process_payment_page, [payment], MAX_RETRY_COUNT)
-                processor.process_confirm_payment_page()
-                processor.process_pay_another_page()
             print('All Done')
 
 
