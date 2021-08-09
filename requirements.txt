@@ -39,7 +39,7 @@ PyInstaller==3.5
 pyOpenSSL==19.1.0
 PySocks==1.7.1
 pytz==2019.3
-pywin32==223
+pywin32==301
 pywin32-ctypes==0.2.0
 PyYAML==5.2
 requests==2.22.0
